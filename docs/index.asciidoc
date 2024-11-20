@@ -92,6 +92,7 @@ This plugin supports the following configuration options plus the <<plugins-{typ
 | <<plugins-{type}s-{plugin}-encoding>> |<<string,string>>, one of `["none", "gzip"]`|No
 | <<plugins-{type}s-{plugin}-endpoint>> |<<string,string>>|No
 | <<plugins-{type}s-{plugin}-prefix>> |<<string,string>>|No
+| <<plugins-{type}s-{plugin}-filename>> |<<string,string>>|No
 | <<plugins-{type}s-{plugin}-proxy_uri>> |<<string,string>>|No
 | <<plugins-{type}s-{plugin}-region>> |<<string,string>>|No
 | <<plugins-{type}s-{plugin}-restore>> |<<boolean,boolean>>|No
@@ -230,6 +231,16 @@ has the potential to create large numbers of unique prefixes, causing large
 numbers of in-progress uploads. This scenario may result in performance and
 stability issues, which can be further exacerbated when you use a
 rotation_strategy that delays uploads.
+
+[id="plugins-{type}s-{plugin}-filename"]
+===== `filename`
+
+  * Value type is <<string,string>>
+  * Default value is `""`
+
+Specify a filename format to use for uploaded files. If not defined, a unique S3 output file will be generated as described above.
+This option supports logstash interpolation: https://www.elastic.co/guide/en/logstash/current/event-dependent-configuration.html#sprintf;
+If you do not configure a unique filename using interpolation, the plugin may overwrite the same file each time an S3 upload takes place.
 
 [id="plugins-{type}s-{plugin}-proxy_uri"]
 ===== `proxy_uri` 
