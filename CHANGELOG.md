@@ -32,6 +32,9 @@
 ## 4.3.0
   - Feat: Added retry_count and retry_delay config [#218](https://github.com/logstash-plugins/logstash-output-s3/pull/218)
 
+## 4.2.5
+  - Added `filename` as an optional configuration setting to specify a custom format for file names. [#134](https://github.com/logstash-plugins/logstash-output-s3/issues/134)
+
 ## 4.2.0
   - Added ability to specify [ONEZONE_IA](https://aws.amazon.com/s3/storage-classes/#__) as storage_class
 
@@ -55,7 +58,7 @@
   - Fixed bucket validation failures when bucket policy requires encryption [#191](https://github.com/logstash-plugins/logstash-output-s3/pull/191)
 
 ## 4.1.4
-  - [#185](https://github.com/logstash-plugins/logstash-output-s3/pull/184) Internal: Revert rake pinning to fix upstream builds
+  - [#185](https://github.com/logstash-plugins/logstash-output-s3/pull/185) Internal: Revert rake pinning to fix upstream builds
 
 ## 4.1.3
   - [#181](https://github.com/logstash-plugins/logstash-output-s3/pull/181) Docs: Fix incorrect characterization of parameters as `required` in example configuration.

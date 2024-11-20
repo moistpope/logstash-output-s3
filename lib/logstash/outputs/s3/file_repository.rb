@@ -30,7 +30,7 @@ module LogStash
             with_lock { |factory| factory.current.size == 0 && (Time.now - factory.current.ctime > @stale_time) }
           end
 
-          def apply(prefix)
+          def apply(prefix, filename)
             return self
           end
 
@@ -55,8 +55,10 @@ module LogStash
             @stale_time = stale_time
           end
 
-          def create_value(prefix_key)
-            PrefixedValue.new(TemporaryFileFactory.new(prefix_key, @tags, @encoding, @temporary_directory), @stale_time)
+          def create_value(prefix_key, filename_key: "")
+            PrefixedValue.new(TemporaryFileFactory.new(prefix_key, @tags, @encoding, @temporary_directory, filename: filename_key), @stale_time)
+          def apply(prefix_key, filename_key: "")
+            PrefixedValue.new(TemporaryFileFactory.new(prefix_key, @tags, @encoding, @temporary_directory, filename: filename_key), @stale_time)
           end
 
         end
@@ -92,24 +94,40 @@ module LogStash
         # @yieldparam factory [TemporaryFileFactory]: a temporary file factory that this thread has exclusive access to
         # @yieldreturn [Object]: a value to return; should NOT be the factory, which should be contained by the exclusive access scope.
         # @return [Object]: the value returned by the provided block
-        def get_factory(prefix_key)
+        # def get_factory(prefix_key, filename_key: "")
 
-          # fast-path: if factory exists and is not deleted, yield it with exclusive access and return
-          prefix_val = @prefixed_factories.get(prefix_key)
-          prefix_val&.with_lock do |factory|
-            # intentional local-jump to ensure deletion detection
-            # is done inside the exclusive access.
-            return yield(factory) unless prefix_val.deleted?
-          end
+        #   key = prefix_key + (filename_key == "" ? "" : ("/" + filename_key))
 
-          # slow-path:
-          # the Concurrent::Map#get operation is lock-free, but may have returned an entry that was being deleted by
-          # another thread (such as via stale detection). If we failed to retrieve a value, or retrieved one that had
-          # been marked deleted, use the atomic Concurrent::Map#compute to retrieve a non-deleted entry.
-          prefix_val = @prefixed_factories.compute(prefix_key) do |existing|
-            existing && !existing.deleted? ? existing : @factory_initializer.create_value(prefix_key)
+        #   # fast-path: if factory exists and is not deleted, yield it with exclusive access and return
+        #   prefix_val = @prefixed_factories.get(prefix_key)
+        #   prefix_val&.with_lock do |factory|
+        #     # intentional local-jump to ensure deletion detection
+        #     # is done inside the exclusive access.
+        #     return yield(factory) unless prefix_val.deleted?
+        #   end
+
+        #   # slow-path:
+        #   # the Concurrent::Map#get operation is lock-free, but may have returned an entry that was being deleted by
+        #   # another thread (such as via stale detection). If we failed to retrieve a value, or retrieved one that had
+        #   # been marked deleted, use the atomic Concurrent::Map#compute to retrieve a non-deleted entry.
+        #   prefix_val = @prefixed_factories.compute(prefix_key) do |existing|
+        #     existing && !existing.deleted? ? existing : @factory_initializer.create_value(prefix_key, filename_key: filename_key)
+        #   end
+        #   prefix_val.with_lock { |factory| yield factory }
+        # end
+
+        # Return the file factory
+        def get_factory(prefix_key, filename_key: "")
+
+          key = prefix_key + (filename_key == "" ? "" : ("/" + filename_key))
+
+          if @prefixed_factories.key?(key)
+            factory = @prefixed_factories[key]
+          else
+            factory = @factory_initializer.apply(prefix_key, filename_key: filename_key)
+            @prefixed_factories[key] = factory
           end
-          prefix_val.with_lock { |factory| yield factory }
+          factory.with_lock { |factory| yield factory }
         end
 
         ##
@@ -124,10 +142,9 @@ module LogStash
               yield factory unless prefix_val.deleted?
             end
           end
-        end
 
-        def get_file(prefix_key)
-          get_factory(prefix_key) { |factory| yield factory.current }
+        def get_file(prefix_key, filename_key: "")
+          get_factory(prefix_key, filename_key: filename_key) { |factory| yield factory.current }
         end
 
         def shutdown
